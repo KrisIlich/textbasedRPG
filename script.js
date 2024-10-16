@@ -66,7 +66,7 @@ const locations = [
   },
   {
     name: "kill monster",
-    "button text": ["Go to town square", "Go to town square", "Go to town square"],
+    "button text": ["Go to town square", "Go to town square", "go to town square"],
     "button functions": [goTown, goTown, easterEgg],
     text: 'The monster screams "Arg!" as it dies. You gain experience points and find gold.'
   },
@@ -86,7 +86,7 @@ const locations = [
     name: "easter egg",
     "button text": ["2", "8", "Go to town square?"],
     "button functions": [pickTwo, pickEight, goTown],
-    text: "An evil genie appears and wants you pick a number above. Ten numbers will be randomly chosen between 0 and 10. If the number you choose matches one of the random numbers, you win!"
+    text: "An evil genie appears and won't let you leave until you pick a number above. Ten numbers will be randomly chosen between 0 and 10. If the number you choose matches one of the random numbers, you win!"
   }
 ];
 
@@ -120,12 +120,14 @@ function goCave() {
 
 function buyHealth() {
   if (gold >= 10) {
-    gold -= 10;
-    health += 10;
-    goldText.innerText = gold;
-    healthText.innerText = health;
+      gold -= 10;
+      health += 10;
+      goldText.innerText = gold;
+      healthText.innerText = health;
+      logToConsole(`You bought 10 health for 10 gold.`);
   } else {
-    text.innerText = "You do not have enough gold to buy health.";
+      text.innerText = "You do not have enough gold to buy health.";
+      logToConsole(`Attempted to buy health but lacked gold.`);
   }
 }
 
@@ -139,13 +141,16 @@ function buyWeapon() {
       text.innerText = "You now have a " + newWeapon + ".";
       inventory.push(newWeapon);
       text.innerText += " In your inventory you have: " + inventory;
+      logToConsole("You bought a new weapon for 30 gold. After buying, you have: " + inventory);
     } else {
       text.innerText = "You do not have enough gold to buy a weapon.";
+      logToConsole("Attempted to buy a weapon but lacked gold.");
     }
   } else {
     text.innerText = "You already have the most powerful weapon!";
     button2.innerText = "Sell weapon for 15 gold";
     button2.onclick = sellWeapon;
+    logToConsole("Attempted to sell a weapon but already had the most powerful one. Try selling the other weapons instead for 15 gold."); 
   }
 }
 
@@ -156,24 +161,29 @@ function sellWeapon() {
     let currentWeapon = inventory.shift();
     text.innerText = "You sold a " + currentWeapon + ".";
     text.innerText += " In your inventory you have: " + inventory;
+    logToConsole(`You sold a weapon for 15 gold. After selling, you have: ${inventory}`);
   } else {
     text.innerText = "Don't sell your only weapon!";
+    logToConsole("Attempted to sell a weapon but only had one.");
   }
 }
 
 function fightSlime() {
   fighting = 0;
   goFight();
+  logToConsole("You engaged in a fight with a slime.");
 }
 
 function fightBeast() {
   fighting = 1;
   goFight();
+  logToConsole("You engaged in a fight with a fanged beast.");
 }
 
 function fightDragon() {
   fighting = 2;
   goFight();
+  logToConsole("You engaged in a fight with a dragon.");
 }
 
 function goFight() {
@@ -187,21 +197,31 @@ function goFight() {
 function attack() {
   text.innerText = "The " + monsters[fighting].name + " attacks.";
   text.innerText += " You attack it with your " + weapons[currentWeapon].name + ".";
-  health -= getMonsterAttackValue(monsters[fighting].level);
+  let monsterDmg = getMonsterAttackValue(monsters[fighting].level);
+  health -= monsterDmg;
   if (isMonsterHit()) {
-    monsterHealth -= weapons[currentWeapon].power + Math.floor(Math.random() * xp) + 1;    
-  } else {
+    monsterDmgTaken = weapons[currentWeapon].power + Math.floor(Math.random() * xp) + 1;
+    monsterHealth -= monsterDmgTaken;    
+    monsterHealthText.innerText = monsterHealth;
+    logToConsole(`The ${monsters[fighting].name} takes ${monsterDmgTaken} damage and the monster hit you for ${monsterDmg} damage.`);
+} else {
     text.innerText += " You miss.";
-  }
+    logToConsole(`You missed the attack on the ${monsters[fighting].name}.`);
+    logToConsole(`The monster hit you for ${monsterDmg} damage.`);
+}
   healthText.innerText = health;
   monsterHealthText.innerText = monsterHealth;
   if (health <= 0) {
     lose();
+    logToConsole(`You lost against ${monsters[locations[fighting]].name}, do you want to replay?`);
   } else if (monsterHealth <= 0) {
     if (fighting === 2) {
       winGame();
+      logToConsole(`You defeated the dragon and won the game!`);
     } else {
       defeatMonster();
+      logToConsole(`You defeated the ${monsters[locations[fighting]].name}.`);
+      logToConsole(`You gained gold and ${monsters[locations[fighting]].level} experience points.`);
     }
   }
   if (Math.random() <= .1 && inventory.length !== 1) {
@@ -221,7 +241,22 @@ function isMonsterHit() {
 }
 
 function dodge() {
-  text.innerText = "You dodge the attack from the " + monsters[fighting].name;
+  if (Math.random() <= 0.7) {
+    text.innerText = "You dodge the attack from the " + monsters[fighting].name;
+    dodgedXP = Math.floor(monsters[fighting].level / 2);
+    xp += dodgedXP;
+    xpText.innerText = xp;
+    logToConsole(`You dodged the attack from the ${monsters[fighting].name}.`);
+    logToConsole(`You gained ${dodgedXP} experience points for dodging.`);
+  }
+  else {
+    partialHit = Math.floor(getMonsterAttackValue(monsters[fighting].level / 2));
+    health -= partialHit;
+    healthText.innerText = health;
+    text.innerText = "The " + monsters[fighting].name + " attacks you, you tried dodging, but failed.";
+    logToConsole(`You failed your dodge! You got partially hit by the ${monsters[fighting].name} and lost ${partialHit} health.`);
+    
+  }
 }
 
 function defeatMonster() {
@@ -250,10 +285,12 @@ function restart() {
   healthText.innerText = health;
   xpText.innerText = xp;
   goTown();
+  logToConsole("You have restarted the game.");
 }
 
 function easterEgg() {
   update(locations[7]);
+  logToConsole("Congratulations! You found the easter egg!");
 }
 
 function pickTwo() {
@@ -271,18 +308,27 @@ function pick(guess) {
   }
   text.innerText = "You picked " + guess + ". Here are the random numbers:\n";
   for (let i = 0; i < 10; i++) {
-    text.innerText += numbers[i] + "\n";
+    text.innerText += numbers[i] + ", ";
   }
   if (numbers.includes(guess)) {
     text.innerText += "Right! You win 20 gold!";
     gold += 20;
     goldText.innerText = gold;
+    logToConsole("You won the easter egg game!");
   } else {
     text.innerText += "Wrong! You lose 10 health!";
     health -= 10;
     healthText.innerText = health;
+    logToConsole("You lost the easter egg game!");
     if (health <= 0) {
       lose();
+
     }
   }
+}
+
+function logToConsole(message) {
+  const consoleDiv = document.getElementById('console');
+  consoleDiv.innerHTML += `<div>${message}</div>`;
+  consoleDiv.scrollTop = consoleDiv.scrollHeight; // Auto-scroll to the latest message
 }
